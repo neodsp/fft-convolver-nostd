@@ -5,7 +5,7 @@ use microfft::Complex32;
 /// The Nyquist bin (real-valued) is stored at `output[SEG_SIZE/2]` with `.im = 0`.
 /// All other bins are positive-frequency terms.
 ///
-/// microfft works in-place and clobbers `input` — do not read it after this call.
+/// microfft works in place and clobbers `input`, so do not read it after this call.
 pub fn forward(input: &mut [f32], output: &mut [Complex32]) {
     debug_assert_eq!(input.len() / 2 + 1, output.len());
 
@@ -90,8 +90,8 @@ fn rfft_dispatch(input: &mut [f32]) -> &mut [Complex32] {
 }
 
 fn ifft_dispatch(scratch: &mut [Complex32]) {
-    // ifft_N returns &mut [Complex32; N] pointing into `scratch` — the result is
-    // already reflected in `scratch`, so the return value is intentionally ignored.
+    // ifft_N returns &mut [Complex32; N] pointing into `scratch`. The result is
+    // already reflected in `scratch`, so we ignore the return value on purpose.
     #[allow(unused_must_use)]
     match scratch.len() {
         16 => {

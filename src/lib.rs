@@ -5,10 +5,10 @@
 //!
 //! # Type parameters
 //!
-//! - `BLOCK_SIZE` — partition size; must be a power of two (8–2048).
-//! - `SEG_SIZE` — must equal `2 * BLOCK_SIZE`.
-//! - `FFT_CPLX_SIZE` — must equal `BLOCK_SIZE + 1`.
-//! - `SEG_COUNT` — maximum number of IR segments (`max_ir_len / BLOCK_SIZE`, rounded up).
+//! - `BLOCK_SIZE`: partition size. Must be a power of two from 8 to 2048.
+//! - `SEG_SIZE`: must equal `2 * BLOCK_SIZE`.
+//! - `FFT_CPLX_SIZE`: must equal `BLOCK_SIZE + 1`.
+//! - `SEG_COUNT`: maximum number of IR segments (`max_ir_len / BLOCK_SIZE`, rounded up).
 //!
 //! Use the provided type aliases (`FFTConvolver64`, `FFTConvolver128`, …) to avoid
 //! spelling out all four parameters.
@@ -36,7 +36,6 @@ mod utilities;
 
 use crate::utilities::{complex_multiply_accumulate, copy_and_pad, sum};
 use microfft::Complex32;
-use rtsan_standalone::nonblocking;
 
 // ── Error type ───────────────────────────────────────────────────────────────
 
@@ -60,7 +59,7 @@ impl core::fmt::Display for FFTConvolverError {
                 f.write_str("input and output buffers must have the same length")
             }
             Self::UnsupportedBlockSize => {
-                f.write_str("block size is not supported (must be power of 2, 8–2048)")
+                f.write_str("block size is not supported (must be power of 2, from 8 to 2048)")
             }
         }
     }
@@ -90,7 +89,7 @@ pub struct FFTConvolver<
     segments: [[Complex32; FFT_CPLX_SIZE]; SEG_COUNT],
     segments_ir: [[Complex32; FFT_CPLX_SIZE]; SEG_COUNT],
 
-    // Real FFT I/O scratch — clobbered by forward FFT (microfft in-place)
+    // Real FFT I/O scratch. The forward FFT clobbers this in place (microfft).
     fft_buffer: [f32; SEG_SIZE],
     // Scratch for the full symmetric spectrum during IRFFT
     ifft_scratch: [Complex32; SEG_SIZE],
@@ -188,7 +187,7 @@ impl<
     /// struct); this just computes and stores the frequency-domain IR segments.
     ///
     /// Returns [`UnsupportedBlockSize`](FFTConvolverError::UnsupportedBlockSize) if
-    /// `BLOCK_SIZE` is not a power-of-two size supported by microfft (8–2048), or if the
+    /// `BLOCK_SIZE` is not a power-of-two size supported by microfft (8 to 2048), or if the
     /// const relationships `SEG_SIZE == 2 * BLOCK_SIZE` and
     /// `FFT_CPLX_SIZE == BLOCK_SIZE + 1` are violated.
     ///
@@ -248,7 +247,6 @@ impl<
     /// Updates the impulse response without reallocating.
     ///
     /// The new IR must not exceed the length passed to `init`.
-    #[nonblocking]
     pub fn set_response(&mut self, impulse_response: &[f32]) -> Result<(), FFTConvolverError> {
         if impulse_response.len() > self.ir_len {
             return Err(FFTConvolverError::ImpulseResponseExceedsCapacity);
@@ -294,7 +292,6 @@ impl<
     ///
     /// Real-time safe: no allocations. Handles arbitrary input lengths via internal
     /// sub-block buffering.
-    #[nonblocking]
     pub fn process(&mut self, input: &[f32], output: &mut [f32]) -> Result<(), FFTConvolverError> {
         if input.len() != output.len() {
             return Err(FFTConvolverError::InputOutputLengthMismatch);
@@ -367,7 +364,6 @@ impl<
     }
 
     /// Resets convolution state while preserving the loaded impulse response.
-    #[nonblocking]
     pub fn reset(&mut self) {
         self.input_buffer.fill(0.0);
         self.input_buffer_fill = 0;

@@ -12,15 +12,13 @@ Companion to [fft-convolver](https://github.com/neodsp/fft-convolver). Uses [mic
 | FFT backend | `realfft` / `rustfft` | `microfft` |
 | Buffer sizes | Runtime (any) | Compile-time (`const` params) |
 | Floating point | `f32` and `f64` | `f32` only |
-| IR update at runtime | Yes (`set_response`) | Yes (`set_response`) |
 
 ## Features
 
 - **`no_std`**: Runs on bare-metal targets (e.g. ARM Cortex-M4/M7)
-- **Zero allocation**: All buffers live in the struct — place it `static` for embedded use
-- **Real-time safe**: `process`, `set_response`, and `reset` perform no allocations
+- **Zero allocation**: All buffers live in the struct
 - **Zero latency**: Output is sample-aligned with input
-- **Flexible input size**: Arbitrary block sizes handled via internal sub-block buffering
+- **Flexible input size**: handles arbitrary block sizes through internal sub-block buffering
 
 ## Usage
 
@@ -32,10 +30,10 @@ The convolver takes four const generic parameters:
 FFTConvolver<BLOCK_SIZE, SEG_SIZE, FFT_CPLX_SIZE, SEG_COUNT>
 ```
 
-- `BLOCK_SIZE` — partition size; must be a power of two (8–2048)
-- `SEG_SIZE` — must equal `2 * BLOCK_SIZE`
-- `FFT_CPLX_SIZE` — must equal `BLOCK_SIZE + 1`
-- `SEG_COUNT` — maximum number of IR segments; determines max IR length (`BLOCK_SIZE * SEG_COUNT` samples)
+- `BLOCK_SIZE`: partition size. Must be a power of two from 8 to 2048.
+- `SEG_SIZE`: must equal `2 * BLOCK_SIZE`.
+- `FFT_CPLX_SIZE`: must equal `BLOCK_SIZE + 1`.
+- `SEG_COUNT`: maximum number of IR segments. This sets the max IR length (`BLOCK_SIZE * SEG_COUNT` samples).
 
 Use the provided aliases to avoid spelling these out:
 
@@ -67,27 +65,6 @@ let mut output = [0.0f32; 256];
 conv.process(&input, &mut output).unwrap();
 ```
 
-### Embedded / static placement
-
-Large convolvers should live in a `static` to avoid stack overflows:
-
-```rust
-use fft_convolver_nostd::FFTConvolver512;
-
-// 512-sample block, up to 8192-sample IR = ~134 KB in BSS (not on the stack)
-static mut CONV: FFTConvolver512<16> = FFTConvolver512::<16>::default_const();
-
-fn audio_init(ir: &[f32]) {
-    unsafe { CONV.init(ir).unwrap() };
-}
-
-fn audio_callback(input: &[f32], output: &mut [f32]) {
-    unsafe { CONV.process(input, output).unwrap() };
-}
-```
-
-> **Note:** `default_const()` is a `const fn` that produces a zero-initialized convolver suitable for `static` placement, since Rust does not currently call `Default::default()` in `static` initializers.
-
 ### Updating the impulse response at runtime
 
 ```rust
@@ -97,7 +74,7 @@ let ir1 = [0.5f32, 0.3, 0.2, 0.1];
 let mut conv = FFTConvolver128::<1>::default();
 conv.init(&ir1).unwrap();
 
-// swap to a different IR — no allocation, real-time safe
+// swap to a different IR without allocating; safe to call in real time
 let ir2 = [0.8f32, 0.6, 0.4];
 conv.set_response(&ir2).unwrap();
 ```
@@ -130,24 +107,11 @@ The struct size is determined entirely by the const parameters. For reference:
 | `FFTConvolver512::<16>` | 512 | 16 | ~264 KB |
 | `FFTConvolver1024::<8>` | 1024 | 8 | ~264 KB |
 
-For anything above ~8 KB, use `static` placement.
-
 ## Supported block sizes
 
 `BLOCK_SIZE` must be one of: **8, 16, 32, 64, 128, 256, 512, 1024, 2048**.
 
 Other values will return `FFTConvolverError::UnsupportedBlockSize` from `init`.
-
-## Real-time safety
-
-Operations marked `#[nonblocking]` (checked by [rtsan](https://docs.rs/rtsan-standalone) in debug builds):
-
-| Method | Real-time safe |
-|---|---|
-| `init` | No (resets all buffers) |
-| `process` | Yes |
-| `set_response` | Yes |
-| `reset` | Yes |
 
 ## License
 

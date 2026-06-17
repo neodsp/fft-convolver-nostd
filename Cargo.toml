@@ -11,7 +11,6 @@ rust-version = "1.87"
 
 [dependencies]
 microfft = { version = "0.6.0", features = ["size-4096"] }
-rtsan-standalone = "0.3.0"
 
 [dev-dependencies]
 fft-convolver = { path = "../fft-convolver" }

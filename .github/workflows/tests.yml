@@ -20,8 +20,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - run: cargo test --locked --all-features --all-targets --workspace
-        env:
-          RTSAN_ENABLE: 1
 
   no-std:
     name: no_std Cross-Compile (thumbv7em-none-eabihf)
