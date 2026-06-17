@@ -1,0 +1,17 @@
+[package]
+name = "fft-convolver-nostd"
+version = "0.1.0"
+edition = "2024"
+authors = ["Stephan Eckes <stephan@neodsp.com>"]
+description = "no_std FFT convolution for embedded audio DSP, using microfft"
+license = "MIT"
+keywords = ["audio", "filter", "convolution", "fft", "dsp"]
+categories = ["multimedia::audio", "no-std"]
+rust-version = "1.87"
+
+[dependencies]
+microfft = { version = "0.6.0", features = ["size-4096"] }
+rtsan-standalone = "0.3.0"
+
+[dev-dependencies]
+fft-convolver = { path = "../fft-convolver" }
