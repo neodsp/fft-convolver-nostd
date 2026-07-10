@@ -13,6 +13,16 @@
 //! Use the provided type aliases (`FFTConvolver64`, `FFTConvolver128`, …) to avoid
 //! spelling out all four parameters.
 //!
+//! # Cargo features
+//!
+//! The supported block sizes are selected by `block-N` features, each enabling
+//! `BLOCK_SIZE == N` (which needs microfft's `2 * N`-point FFT). They are additive:
+//! enabling a larger size pulls in every smaller one. Only the sine tables for the
+//! enabled sizes are compiled, so choose the smallest size that covers your block
+//! size to keep microfft's footprint small enough for constrained microcontrollers.
+//! The default is `block-512`; enable e.g. `block-2048` for larger blocks, or use
+//! `default-features = false` plus a single `block-N` for the smallest footprint.
+//!
 //! # Example
 //!
 //! ```
@@ -30,6 +40,14 @@
 
 #![no_std]
 #![deny(missing_debug_implementations)]
+
+// At least one block size must be selected, otherwise no FFT is available and
+// microfft itself fails to compile with an opaque error.
+#[cfg(not(feature = "block-8"))]
+compile_error!(
+    "no block size selected: enable at least one `block-N` feature \
+     (e.g. the default `block-512`, or `default-features = false` with `block-256`)"
+);
 
 mod fft;
 mod utilities;
@@ -187,8 +205,9 @@ impl<
     /// struct); this just computes and stores the frequency-domain IR segments.
     ///
     /// Returns [`UnsupportedBlockSize`](FFTConvolverError::UnsupportedBlockSize) if
-    /// `BLOCK_SIZE` is not a power-of-two size supported by microfft (8 to 2048), or if the
-    /// const relationships `SEG_SIZE == 2 * BLOCK_SIZE` and
+    /// `BLOCK_SIZE` is not a power-of-two size in the range 8 to 2048 whose `block-N`
+    /// cargo feature is enabled (see the crate features; the default only enables sizes
+    /// up to `block-512`), or if the const relationships `SEG_SIZE == 2 * BLOCK_SIZE` and
     /// `FFT_CPLX_SIZE == BLOCK_SIZE + 1` are violated.
     ///
     /// Returns [`ImpulseResponseExceedsCapacity`](FFTConvolverError::ImpulseResponseExceedsCapacity)
@@ -378,29 +397,53 @@ impl<
     }
 
     fn block_size_supported() -> bool {
-        matches!(BLOCK_SIZE, 8 | 16 | 32 | 64 | 128 | 256 | 512 | 1024 | 2048)
+        // Each size is a power of two supported by microfft *and* enabled by the
+        // corresponding `block-N` cargo feature. Sizes whose feature is disabled
+        // are compiled out of the FFT dispatch, so report them as unsupported here
+        // rather than letting `init` reach the runtime panic in the dispatch.
+        match BLOCK_SIZE {
+            8 => cfg!(feature = "block-8"),
+            16 => cfg!(feature = "block-16"),
+            32 => cfg!(feature = "block-32"),
+            64 => cfg!(feature = "block-64"),
+            128 => cfg!(feature = "block-128"),
+            256 => cfg!(feature = "block-256"),
+            512 => cfg!(feature = "block-512"),
+            1024 => cfg!(feature = "block-1024"),
+            2048 => cfg!(feature = "block-2048"),
+            _ => false,
+        }
     }
 }
 
 // ── Convenience aliases ───────────────────────────────────────────────────────
 
-/// `FFTConvolver` with `BLOCK_SIZE=8` (SEG_SIZE=16, FFT_CPLX_SIZE=9).
+/// `FFTConvolver` with `BLOCK_SIZE=8` (SEG_SIZE=16, FFT_CPLX_SIZE=9). Requires the `block-8` feature.
+#[cfg(feature = "block-8")]
 pub type FFTConvolver8<const SEG_COUNT: usize> = FFTConvolver<8, 16, 9, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=16` (SEG_SIZE=32, FFT_CPLX_SIZE=17).
+/// `FFTConvolver` with `BLOCK_SIZE=16` (SEG_SIZE=32, FFT_CPLX_SIZE=17). Requires the `block-16` feature.
+#[cfg(feature = "block-16")]
 pub type FFTConvolver16<const SEG_COUNT: usize> = FFTConvolver<16, 32, 17, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=32` (SEG_SIZE=64, FFT_CPLX_SIZE=33).
+/// `FFTConvolver` with `BLOCK_SIZE=32` (SEG_SIZE=64, FFT_CPLX_SIZE=33). Requires the `block-32` feature.
+#[cfg(feature = "block-32")]
 pub type FFTConvolver32<const SEG_COUNT: usize> = FFTConvolver<32, 64, 33, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=64` (SEG_SIZE=128, FFT_CPLX_SIZE=65).
+/// `FFTConvolver` with `BLOCK_SIZE=64` (SEG_SIZE=128, FFT_CPLX_SIZE=65). Requires the `block-64` feature.
+#[cfg(feature = "block-64")]
 pub type FFTConvolver64<const SEG_COUNT: usize> = FFTConvolver<64, 128, 65, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=128` (SEG_SIZE=256, FFT_CPLX_SIZE=129).
+/// `FFTConvolver` with `BLOCK_SIZE=128` (SEG_SIZE=256, FFT_CPLX_SIZE=129). Requires the `block-128` feature.
+#[cfg(feature = "block-128")]
 pub type FFTConvolver128<const SEG_COUNT: usize> = FFTConvolver<128, 256, 129, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=256` (SEG_SIZE=512, FFT_CPLX_SIZE=257).
+/// `FFTConvolver` with `BLOCK_SIZE=256` (SEG_SIZE=512, FFT_CPLX_SIZE=257). Requires the `block-256` feature.
+#[cfg(feature = "block-256")]
 pub type FFTConvolver256<const SEG_COUNT: usize> = FFTConvolver<256, 512, 257, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=512` (SEG_SIZE=1024, FFT_CPLX_SIZE=513).
+/// `FFTConvolver` with `BLOCK_SIZE=512` (SEG_SIZE=1024, FFT_CPLX_SIZE=513). Requires the `block-512` feature.
+#[cfg(feature = "block-512")]
 pub type FFTConvolver512<const SEG_COUNT: usize> = FFTConvolver<512, 1024, 513, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=1024` (SEG_SIZE=2048, FFT_CPLX_SIZE=1025).
+/// `FFTConvolver` with `BLOCK_SIZE=1024` (SEG_SIZE=2048, FFT_CPLX_SIZE=1025). Requires the `block-1024` feature.
+#[cfg(feature = "block-1024")]
 pub type FFTConvolver1024<const SEG_COUNT: usize> = FFTConvolver<1024, 2048, 1025, SEG_COUNT>;
-/// `FFTConvolver` with `BLOCK_SIZE=2048` (SEG_SIZE=4096, FFT_CPLX_SIZE=2049).
+/// `FFTConvolver` with `BLOCK_SIZE=2048` (SEG_SIZE=4096, FFT_CPLX_SIZE=2049). Requires the `block-2048` feature.
+#[cfg(feature = "block-2048")]
 pub type FFTConvolver2048<const SEG_COUNT: usize> = FFTConvolver<2048, 4096, 2049, SEG_COUNT>;
 
 // ── Tests ─────────────────────────────────────────────────────────────────────

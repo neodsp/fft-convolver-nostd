@@ -49,38 +49,47 @@ pub fn inverse(input: &[Complex32], scratch: &mut [Complex32], output: &mut [f32
 
 fn rfft_dispatch(input: &mut [f32]) -> &mut [Complex32] {
     match input.len() {
+        #[cfg(feature = "block-8")]
         16 => {
             let arr: &mut [f32; 16] = input.try_into().unwrap();
             microfft::real::rfft_16(arr)
         }
+        #[cfg(feature = "block-16")]
         32 => {
             let arr: &mut [f32; 32] = input.try_into().unwrap();
             microfft::real::rfft_32(arr)
         }
+        #[cfg(feature = "block-32")]
         64 => {
             let arr: &mut [f32; 64] = input.try_into().unwrap();
             microfft::real::rfft_64(arr)
         }
+        #[cfg(feature = "block-64")]
         128 => {
             let arr: &mut [f32; 128] = input.try_into().unwrap();
             microfft::real::rfft_128(arr)
         }
+        #[cfg(feature = "block-128")]
         256 => {
             let arr: &mut [f32; 256] = input.try_into().unwrap();
             microfft::real::rfft_256(arr)
         }
+        #[cfg(feature = "block-256")]
         512 => {
             let arr: &mut [f32; 512] = input.try_into().unwrap();
             microfft::real::rfft_512(arr)
         }
+        #[cfg(feature = "block-512")]
         1024 => {
             let arr: &mut [f32; 1024] = input.try_into().unwrap();
             microfft::real::rfft_1024(arr)
         }
+        #[cfg(feature = "block-1024")]
         2048 => {
             let arr: &mut [f32; 2048] = input.try_into().unwrap();
             microfft::real::rfft_2048(arr)
         }
+        #[cfg(feature = "block-2048")]
         4096 => {
             let arr: &mut [f32; 4096] = input.try_into().unwrap();
             microfft::real::rfft_4096(arr)
@@ -94,38 +103,47 @@ fn ifft_dispatch(scratch: &mut [Complex32]) {
     // already reflected in `scratch`, so we ignore the return value on purpose.
     #[allow(unused_must_use)]
     match scratch.len() {
+        #[cfg(feature = "block-8")]
         16 => {
             let arr: &mut [Complex32; 16] = scratch.try_into().unwrap();
             microfft::inverse::ifft_16(arr);
         }
+        #[cfg(feature = "block-16")]
         32 => {
             let arr: &mut [Complex32; 32] = scratch.try_into().unwrap();
             microfft::inverse::ifft_32(arr);
         }
+        #[cfg(feature = "block-32")]
         64 => {
             let arr: &mut [Complex32; 64] = scratch.try_into().unwrap();
             microfft::inverse::ifft_64(arr);
         }
+        #[cfg(feature = "block-64")]
         128 => {
             let arr: &mut [Complex32; 128] = scratch.try_into().unwrap();
             microfft::inverse::ifft_128(arr);
         }
+        #[cfg(feature = "block-128")]
         256 => {
             let arr: &mut [Complex32; 256] = scratch.try_into().unwrap();
             microfft::inverse::ifft_256(arr);
         }
+        #[cfg(feature = "block-256")]
         512 => {
             let arr: &mut [Complex32; 512] = scratch.try_into().unwrap();
             microfft::inverse::ifft_512(arr);
         }
+        #[cfg(feature = "block-512")]
         1024 => {
             let arr: &mut [Complex32; 1024] = scratch.try_into().unwrap();
             microfft::inverse::ifft_1024(arr);
         }
+        #[cfg(feature = "block-1024")]
         2048 => {
             let arr: &mut [Complex32; 2048] = scratch.try_into().unwrap();
             microfft::inverse::ifft_2048(arr);
         }
+        #[cfg(feature = "block-2048")]
         4096 => {
             let arr: &mut [Complex32; 4096] = scratch.try_into().unwrap();
             microfft::inverse::ifft_4096(arr);

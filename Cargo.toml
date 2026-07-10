@@ -10,7 +10,24 @@ categories = ["multimedia::audio", "no-std"]
 rust-version = "1.87"
 
 [dependencies]
-microfft = { version = "0.6.0", features = ["size-4096"] }
+microfft = { version = "0.6.0", default-features = false }
 
 [dev-dependencies]
 fft-convolver = "0.4.0"
+
+[features]
+# Each `block-N` feature enables support for `BLOCK_SIZE == N`, which needs an
+# FFT of size `2 * N` from microfft. The features are additive: enabling a larger
+# block size pulls in every smaller one. Only the sine tables for the sizes you
+# enable get compiled in, so pick the smallest that covers your block size to keep
+# microfft's memory footprint small enough for constrained microcontrollers.
+default = ["block-512"]
+block-8 = ["microfft/size-16"]
+block-16 = ["block-8", "microfft/size-32"]
+block-32 = ["block-16", "microfft/size-64"]
+block-64 = ["block-32", "microfft/size-128"]
+block-128 = ["block-64", "microfft/size-256"]
+block-256 = ["block-128", "microfft/size-512"]
+block-512 = ["block-256", "microfft/size-1024"]
+block-1024 = ["block-512", "microfft/size-2048"]
+block-2048 = ["block-1024", "microfft/size-4096"]
